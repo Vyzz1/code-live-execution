@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CodeSession } from './code-session.entity';
 import { CreateSessionDto, UpdateSessionDto } from './dto/request';
@@ -22,7 +22,10 @@ export class CodeSessionService {
     private readonly executionQueue: Queue,
   ) {}
 
-  async runCodeSession(codeSessionId: string): Promise<RunCodeResponse> {
+  async runCodeSession(
+    codeSessionId: string,
+    idempotencyKey?: string,
+  ): Promise<RunCodeResponse> {
     const session = await this.sessionRepo.findOne({
       where: { id: codeSessionId },
     });
@@ -31,25 +34,61 @@ export class CodeSessionService {
       throw new NotFoundException('Session not found');
     }
 
-    const execution = await this.executionService.createExecution(
-      session,
-      session.sourceCode,
-      JOB_QUEUE_CONFIG.options.attempts,
-    );
+    try {
+      if (idempotencyKey) {
+        const existingExecution =
+          await this.executionService.findByIdempotencyKey(idempotencyKey);
 
-    await this.executionQueue.add(
-      JOB_QUEUE_CONFIG.name,
-      {
-        executionId: execution.id,
-        sessionId: session.id,
-        sourceCode: session.sourceCode,
-        language: session.language,
-      },
-      {
-        ...JOB_QUEUE_CONFIG.options,
-      },
-    );
-    return new RunCodeResponse(execution.id, execution.status);
+        if (existingExecution) {
+          return new RunCodeResponse(
+            existingExecution.id,
+            existingExecution.status,
+          );
+        }
+      }
+
+      const execution = await this.executionService.createExecution(
+        session,
+        session.sourceCode,
+        JOB_QUEUE_CONFIG.options.attempts,
+        idempotencyKey,
+      );
+
+      await this.executionQueue.add(
+        JOB_QUEUE_CONFIG.name,
+        {
+          executionId: execution.id,
+          sessionId: session.id,
+          sourceCode: session.sourceCode,
+          language: session.language,
+        },
+        {
+          ...JOB_QUEUE_CONFIG.options,
+        },
+      );
+
+      return new RunCodeResponse(execution.id, execution.status);
+    } catch (err) {
+      // Handle race condition with duplicate idempotency key
+      if (
+        idempotencyKey &&
+        err instanceof QueryFailedError &&
+        (err as any).code === '23505'
+      ) {
+        const existed =
+          await this.executionService.findByIdempotencyKey(idempotencyKey);
+
+        console.warn('Existed execution due to race condition:', existed);
+
+        if (!existed) {
+          throw err;
+        }
+
+        return new RunCodeResponse(existed.id, existed.status);
+      }
+
+      throw err;
+    }
   }
 
   async createSession(dto: CreateSessionDto): Promise<CodeSessionResponse> {

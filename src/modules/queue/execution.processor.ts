@@ -54,12 +54,22 @@ export class ExecutionProcessor extends WorkerHost {
       const result = await this.executeCode(sourceCode, language);
 
       // Update execution with results
-      execution.status = ExecutionStatus.COMPLETED;
       execution.stdout = result.stdout;
       execution.stderr = result.stderr;
       execution.exitCode = result.exitCode;
       execution.executionTimeMs = result.executionTimeMs;
       execution.finishedAt = new Date();
+
+      // Check if execution failed (non-zero exit code)
+      if (result.exitCode !== 0) {
+        execution.status = ExecutionStatus.FAILED;
+        execution.errorType =
+          result.exitCode === 124 ? 'TimeoutError' : 'RuntimeError';
+        execution.errorMessage =
+          result.stderr || 'Execution failed with non-zero exit code';
+      } else {
+        execution.status = ExecutionStatus.COMPLETED;
+      }
 
       await this.executionRepo.save(execution);
 

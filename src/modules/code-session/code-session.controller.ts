@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -18,8 +19,11 @@ export class CodeSessionController {
     return this.codeSessionService.createSession(dto);
   }
   @Post(':sessionId/run')
-  runCodeSession(@Param('sessionId', new ParseUUIDPipe({})) sessionId: string) {
-    return this.codeSessionService.runCodeSession(sessionId);
+  runCodeSession(
+    @Param('sessionId', new ParseUUIDPipe({})) sessionId: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.codeSessionService.runCodeSession(sessionId, idempotencyKey);
   }
 
   @Patch(':sessionId')
