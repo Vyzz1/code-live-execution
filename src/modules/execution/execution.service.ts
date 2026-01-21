@@ -1,8 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+
 import { Execution } from './execution.entity';
 import { CodeSession } from '../code-session/code-session.entity';
 import { ExecutionStatus } from '../../configs/constant';
@@ -12,55 +11,23 @@ export class ExecutionService {
   constructor(
     @InjectRepository(Execution)
     private readonly executionRepo: Repository<Execution>,
-    @InjectRepository(CodeSession)
-    private readonly sessionRepo: Repository<CodeSession>,
-    @InjectQueue('code-execution')
-    private readonly executionQueue: Queue,
   ) {}
 
-  async runCodeSession(codeSessionId: string): Promise<Execution> {
-    // Find the session
-    const session = await this.sessionRepo.findOne({
-      where: { id: codeSessionId },
-    });
-
-    if (!session) {
-      throw new NotFoundException('Session not found');
-    }
-
-    // Create execution record
+  async createExecution(
+    session: CodeSession,
+    sourceCode: string,
+    maxAttempts: number,
+  ): Promise<Execution> {
     const execution = this.executionRepo.create({
       session: session,
       status: ExecutionStatus.QUEUED,
-      sourceCodeSnapshot: session.sourceCode,
+      sourceCodeSnapshot: sourceCode,
       queuedAt: new Date(),
       attempt: 1,
-      maxAttempts: 3,
+      maxAttempts,
     });
 
-    await this.executionRepo.save(execution);
-
-    // Add job to queue
-    await this.executionQueue.add(
-      'execute-code',
-      {
-        executionId: execution.id,
-        sessionId: session.id,
-        sourceCode: session.sourceCode,
-        language: session.language,
-      },
-      {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-        removeOnComplete: false,
-        removeOnFail: false,
-      },
-    );
-
-    return execution;
+    return this.executionRepo.save(execution);
   }
 
   async getExecution(executionId: string): Promise<Execution> {

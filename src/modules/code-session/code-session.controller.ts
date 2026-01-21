@@ -1,4 +1,11 @@
-import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { CodeSessionService } from './code-session.service';
 import { CreateSessionDto, UpdateSessionDto } from './dto/request';
 
@@ -10,9 +17,16 @@ export class CodeSessionController {
   createCodeSession(@Body() dto: CreateSessionDto) {
     return this.codeSessionService.createSession(dto);
   }
+  @Post(':sessionId/run')
+  runCodeSession(@Param('sessionId', new ParseUUIDPipe({})) sessionId: string) {
+    return this.codeSessionService.runCodeSession(sessionId);
+  }
 
-  @Patch(':id')
-  updateCodeSession(@Param('id') id: string, @Body() dto: UpdateSessionDto) {
-    return this.codeSessionService.updateSession(id, dto);
+  @Patch(':sessionId')
+  updateCodeSession(
+    @Param('sessionId', new ParseUUIDPipe({})) sessionId: string,
+    @Body() dto: UpdateSessionDto,
+  ) {
+    return this.codeSessionService.updateSession(sessionId, dto);
   }
 }

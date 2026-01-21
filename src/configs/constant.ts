@@ -40,3 +40,16 @@ export const DOCKER_CONFIG = {
   securityOpts: ['no-new-privileges:true'],
   readOnly: true,
 };
+
+export const JOB_QUEUE_CONFIG = {
+  name: 'code-execution',
+  options: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000,
+    },
+    removeOnComplete: false,
+    removeOnFail: false,
+  },
+};

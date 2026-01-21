@@ -1,27 +1,21 @@
-import { Controller, Post, Param, Get } from '@nestjs/common';
+import { Controller, Post, Param, Get, ParseUUIDPipe } from '@nestjs/common';
 import { ExecutionService } from './execution.service';
 
 @Controller('executions')
 export class ExecutionController {
   constructor(private readonly executionService: ExecutionService) {}
 
-  @Post('sessions/:sessionId/run')
-  async runCodeSession(@Param('sessionId') sessionId: string) {
-    const execution = await this.executionService.runCodeSession(sessionId);
-    return {
-      executionId: execution.id,
-      status: execution.status,
-      queuedAt: execution.queuedAt,
-    };
-  }
-
-  @Get(':id')
-  async getExecution(@Param('id') id: string) {
-    return this.executionService.getExecution(id);
+  @Get(':sessionId')
+  async getExecution(
+    @Param('sessionId', new ParseUUIDPipe({})) sessionId: string,
+  ) {
+    return this.executionService.getExecution(sessionId);
   }
 
   @Get('sessions/:sessionId')
-  async getExecutionsBySession(@Param('sessionId') sessionId: string) {
+  async getExecutionsBySession(
+    @Param('sessionId', new ParseUUIDPipe({})) sessionId: string,
+  ) {
     return this.executionService.getExecutionsBySession(sessionId);
   }
 }

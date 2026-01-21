@@ -12,3 +12,16 @@ export class CodeSessionResponse {
     this.status = status;
   }
 }
+
+export class RunCodeResponse {
+  @Expose({ name: 'execution_id' })
+  executionId: string;
+
+  @Expose({ name: 'status' })
+  status: string;
+
+  constructor(executionId: string, status: string) {
+    this.executionId = executionId;
+    this.status = status;
+  }
+}
