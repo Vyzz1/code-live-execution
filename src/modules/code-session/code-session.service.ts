@@ -24,7 +24,7 @@ export class CodeSessionService {
 
   async runCodeSession(
     codeSessionId: string,
-    idempotencyKey?: string,
+    idempotencyKeyReq?: string,
   ): Promise<RunCodeResponse> {
     const session = await this.sessionRepo.findOne({
       where: { id: codeSessionId },
@@ -34,17 +34,16 @@ export class CodeSessionService {
       throw new NotFoundException('Session not found');
     }
 
+    const idempotencyKey = idempotencyKeyReq || crypto.randomUUID();
     try {
-      if (idempotencyKey) {
-        const existingExecution =
-          await this.executionService.findByIdempotencyKey(idempotencyKey);
+      const existingExecution =
+        await this.executionService.findByIdempotencyKey(idempotencyKey);
 
-        if (existingExecution) {
-          return new RunCodeResponse(
-            existingExecution.id,
-            existingExecution.status,
-          );
-        }
+      if (existingExecution) {
+        return new RunCodeResponse(
+          existingExecution.id,
+          existingExecution.status,
+        );
       }
 
       const execution = await this.executionService.createExecution(
