@@ -1,0 +1,17 @@
+
+
+build
+.temp
+
+README.md
+.git
+
+test
+
+node_modules
+
+.dockerignore
+
+dist
+
+Dockerfile
