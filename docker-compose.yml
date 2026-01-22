@@ -47,6 +47,8 @@ services:
       - DATABASE_URL=postgresql://root:secret@postgres13:5432/code_live_execution
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 volumes:
   redisdata:
   pgdata:

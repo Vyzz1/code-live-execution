@@ -37,6 +37,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 
+#  Install Docker CLI
+RUN apk add --no-cache docker-cli bash
+
 COPY wait-for-it.sh ./wait-for-it.sh
 RUN apk add --no-cache dos2unix bash \
     && dos2unix /app/wait-for-it.sh \
@@ -46,5 +49,5 @@ RUN apk add --no-cache dos2unix bash \
 ENV NODE_ENV=production
 COPY .env ./.env
 
-USER node
+
 CMD ["node", "dist/main.js"]

@@ -5,12 +5,13 @@ import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
 import { CodeSession } from './code-session.entity';
 import { ExecutionModule } from '../execution/execution.module';
 import { BullModule } from '@nestjs/bullmq';
+import { JOB_QUEUE_CONFIG } from 'src/configs/constant';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CodeSession]),
     BullModule.registerQueue({
-      name: 'code-execution',
+      name: JOB_QUEUE_CONFIG.name
     }),
     ExecutionModule,
   ],
